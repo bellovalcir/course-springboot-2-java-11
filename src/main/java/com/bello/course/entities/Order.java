@@ -2,16 +2,22 @@ package com.bello.course.entities;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import com.bello.course.entities.enums.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Entity
@@ -19,33 +25,45 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 public class Order implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
+	//ATRIBUTOS
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long Id;
+	private Long id;
 	
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "GMT")
 	private Instant moment;
+	
+	private Integer orderStatus;
 	
 	@ManyToOne
 	@JoinColumn(name = "client_id")
 	private User client;
 	
+	@OneToMany(mappedBy = "id.order")
+	private Set<OrderItem> items = new HashSet<>();
+	
+	@OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
+	private Payment payment;
+	
+	//CONTRUTORES
 	public Order() {
 	}
 
-	public Order(Long id, Instant moment, User client) {
+	public Order(Long id, Instant moment, OrderStatus orderStatus, User client) {
 		super();
-		Id = id;
+		id = id;
 		this.moment = moment;
+		setOrderStatus(orderStatus);
 		this.client = client;
 	}
 
+	//GETS AND SETS
 	public Long getId() {
-		return Id;
+		return id;
 	}
 
 	public void setId(Long id) {
-		Id = id;
+		id = id;
 	}
 
 	public Instant getMoment() {
@@ -53,7 +71,17 @@ public class Order implements Serializable {
 	}
 
 	public void setMoment(Instant moment) {
-		this.moment = moment;
+		this.moment = moment;		
+	}
+	
+	public OrderStatus getOrderStatus() {
+		return OrderStatus.valueOf(orderStatus);
+	}
+
+	public void setOrderStatus(OrderStatus orderStatus) {
+		if (orderStatus != null ) {
+			this.orderStatus = orderStatus.getCode();
+		}
 	}
 
 	public User getClient() {
@@ -63,10 +91,32 @@ public class Order implements Serializable {
 	public void setClient(User client) {
 		this.client = client;
 	}
+	
+	@OneToOne(mappedBy = "order", cascade = CascadeType.ALL) // faz o id de Order seja o mesmo para payment
+	public Payment getPayment() {
+		return payment;
+	}
 
+	public void setPayment(Payment payment) {
+		this.payment = payment;
+	}
+
+	public Set<OrderItem> getItems(){
+		return items;
+	}
+
+	public Double getTotal() {
+		double sum = 0.0;
+		for (OrderItem x : items) {
+			sum = sum + x.getSubTotal();
+		}
+		return sum;
+	}
+	
+	//HASH CODE AND EQUALS
 	@Override
 	public int hashCode() {
-		return Objects.hash(Id);
+		return Objects.hash(id);
 	}
 
 	@Override
@@ -78,7 +128,7 @@ public class Order implements Serializable {
 		if (getClass() != obj.getClass())
 			return false;
 		Order other = (Order) obj;
-		return Objects.equals(Id, other.Id);
+		return Objects.equals(id, other.id);
 	}
 	
 	
